@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Tpi - Suivi de Commandes & Fidélité</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- QRCode.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- html5-qrcode scanner -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#0284c7',
+              600: '#0284c7',
+              800: '#075985',
+              900: '#0c4a6e',
+              accent: '#f97316'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body class="h-full flex flex-col min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- Header / Navigation -->
+  <header id="mainHeader" class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-accent flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <i class="fa-solid fa-paper-plane text-white text-lg"></i>
+        </div>
+        <div>
+          <span class="font-bold text-xl tracking-tight bg-gradient-to-r from-white via-slate-200 to-brand-400 bg-clip-text text-transparent">My Tpi</span>
+          <span class="text-xs text-amber-500 font-medium px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 ml-2 hidden sm:inline-block">Atelier d'Aviation</span>
+        </div>
+      </div>
+
+      <!-- User Nav State -->
+      <div id="userNav" class="hidden flex items-center space-x-4">
+        <div class="text-right hidden sm:block">
+          <div id="navUserEmail" class="text-sm font-semibold text-slate-200">client@example.com</div>
+          <span id="navUserRole" class="inline-block text-xs px-2 py-0.5 rounded-full bg-slate-800 text-brand-400 font-medium border border-slate-700">Client</span>
+        </div>
+        <button onclick="logout()" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center space-x-1" title="Déconnexion">
+          <i class="fa-solid fa-right-from-bracket text-lg"></i>
+          <span class="text-sm font-medium hidden sm:inline">Déconnexion</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Toast Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- Main Content View Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col justify-center">
+
+    <!-- 1. AUTHENTICATION VIEW -->
+    <div id="authView" class="max-w-md w-full mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+      <!-- Decorator glow -->
+      <div class="absolute -top-12 -right-12 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl"></div>
+
+      <!-- Auth Header -->
+      <div class="text-center mb-6">
+        <h2 id="authTitle" class="text-2xl font-bold text-white tracking-tight">Connexion à votre espace</h2>
+        <p id="authSubtitle" class="text-sm text-slate-400 mt-1">Accédez au suivi de vos avions & votre carte de fidélité</p>
+      </div>
+
+      <!-- Login / Signup Form -->
+      <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Adresse E-mail</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500"><i class="fa-solid fa-envelope"></i></span>
+            <input type="email" id="authEmail" required placeholder="nom@exemple.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition">
+          </div>
+          <p id="adminBadgeNotice" class="text-xs text-amber-400 mt-1 hidden"><i class="fa-solid fa-shield-halved"></i> Connexion Admin détectée (`tpi.avion@gmail.com`) — Mot de passe non requis.</p>
+        </div>
+
+        <div id="passwordGroup">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Mot de passe</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500"><i class="fa-solid fa-lock"></i></span>
+            <input type="password" id="authPassword" placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-10 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition">
+            <button type="button" onclick="togglePasswordVisibility('authPassword', 'toggleAuthPasswordIcon')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300">
+              <i id="toggleAuthPasswordIcon" class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div id="authActionsRow" class="flex items-center justify-between text-xs">
+          <button type="button" onclick="toggleForgotPassword()" class="text-brand-400 hover:underline">Mot de passe oublié ?</button>
+        </div>
+
+        <button type="submit" id="authSubmitBtn" class="w-full py-3 px-4 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-semibold rounded-xl shadow-lg shadow-brand-500/25 transition transform active:scale-[0.98]">
+          Se Connecter
+        </button>
+      </form>
+
+      <!-- Toggle Mode Footer -->
+      <div class="mt-6 pt-4 border-t border-slate-800 text-center text-xs text-slate-400">
+        <span id="authToggleText">Pas encore de compte ?</span>
+        <button onclick="toggleAuthMode()" id="authToggleBtn" class="text-brand-400 font-semibold hover:underline ml-1">Créer un compte</button>
+      </div>
+    </div>
+
+
+    <!-- 2. CLIENT DASHBOARD VIEW -->
+    <div id="clientDashboard" class="hidden space-y-8">
+      
+      <!-- Top Welcome Banner & Loyalty Card Card -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Welcome Card -->
+        <div class="lg:col-span-2 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden">
+          <div class="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-3xl"></div>
+          <div>
+            <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-semibold mb-4">
+              <i class="fa-solid fa-plane-up"></i>
+              <span>Espace Client Privilège</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-white">Bienvenue dans votre hangar !</h1>
+            <p class="text-slate-400 text-sm mt-2 max-w-xl">
+              Suivez en temps réel la préparation et l'assemblage de vos avions de collection (en papier origami ou équipés de moteurs thermiques/électriques).
+            </p>
+          </div>
+          
+          <div class="mt-6 pt-6 border-t border-slate-800/80 flex flex-wrap items-center gap-4 text-xs text-slate-400">
+            <span class="flex items-center space-x-1.5"><i class="fa-solid fa-circle-check text-emerald-400"></i><span>Livraison sécurisée</span></span>
+            <span class="flex items-center space-x-1.5"><i class="fa-solid fa-screwdriver-wrench text-amber-400"></i><span>Test en soufflerie inclus</span></span>
+            <span class="flex items-center space-x-1.5"><i class="fa-solid fa-qrcode text-brand-400"></i><span>Carte de fidélité scannable</span></span>
+          </div>
+        </div>
+
+        <!-- Loyalty Card UI -->
+        <div class="bg-gradient-to-br from-slate-900 via-slate-850 to-brand-950/40 border border-amber-500/20 rounded-2xl p-6 flex flex-col justify-between relative shadow-xl overflow-hidden">
+          <div class="flex justify-between items-start z-10">
+            <div>
+              <span class="text-xs font-bold tracking-widest text-amber-400 uppercase">Carte Privilège My Tpi</span>
+              <h3 class="text-xl font-bold text-white mt-1">Fidélité Aéronautique</h3>
+            </div>
+            <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <i class="fa-solid fa-award text-lg"></i>
+            </div>
+          </div>
+
+          <div class="my-6 flex items-center justify-between z-10">
+            <!-- QR Code container -->
+            <div class="bg-white p-2 rounded-xl shadow-md flex-shrink-0">
+              <div id="qrcodeCanvas" class="w-24 h-24 flex items-center justify-center"></div>
+            </div>
+            
+            <div class="text-right">
+              <div class="text-xs text-slate-400 uppercase font-medium">Solde actuel</div>
+              <div class="text-3xl font-extrabold text-amber-400 tracking-tight mt-0.5"><span id="clientPoints">0</span> <span class="text-sm font-semibold">pts</span></div>
+              <p class="text-[10px] text-slate-400 mt-1 max-w-[120px]">À faire scanner par l'Admin (+2 pts / scan)</p>
+            </div>
+          </div>
+
+          <div class="text-[11px] text-slate-400 font-mono z-10 flex justify-between items-center border-t border-slate-800/80 pt-3">
+            <span>ID: <span id="clientCardId">---</span></span>
+            <span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check-double mr-1"></i>Active</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Orders Section -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-boxes-packing text-brand-400"></i> Mes Avions en Commande
+          </h2>
+          <span id="orderCountBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">0 commande(s)</span>
+        </div>
+
+        <div id="clientOrdersList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Dynamically populated orders -->
+        </div>
+
+        <!-- Empty state -->
+        <div id="emptyOrdersClient" class="hidden text-center py-12 bg-slate-900/50 border border-slate-800 rounded-2xl">
+          <i class="fa-solid fa-plane-slash text-4xl text-slate-600 mb-3"></i>
+          <p class="text-slate-300 font-medium">Aucune commande en cours</p>
+          <p class="text-xs text-slate-500 mt-1">L'administrateur n'a pas encore ajouté de commande pour votre adresse e-mail.</p>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- 3. ADMIN DASHBOARD VIEW -->
+    <div id="adminDashboard" class="hidden space-y-8">
+      
+      <!-- Admin Bar Header -->
+      <div class="bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+            <i class="fa-solid fa-user-shield text-xl"></i>
+          </div>
+          <div>
+            <span class="text-xs font-bold uppercase tracking-widest text-amber-400">Panneau de Contrôle Master</span>
+            <h1 class="text-2xl font-bold text-white">Administration des Atelier Aéro</h1>
+          </div>
+        </div>
+
+        <!-- Admin Actions Tabs -->
+        <div class="flex flex-wrap gap-2">
+          <button onclick="switchAdminTab('orders')" id="tabBtnOrders" class="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 text-white transition flex items-center gap-2">
+            <i class="fa-solid fa-list-check"></i> Commandes & Production
+          </button>
+          <button onclick="switchAdminTab('newOrder')" id="tabBtnNewOrder" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition flex items-center gap-2 border border-slate-700">
+            <i class="fa-solid fa-plus-circle"></i> Créer une commande
+          </button>
+          <button onclick="switchAdminTab('scanner')" id="tabBtnScanner" class="px-4 py-2 rounded-xl text-xs font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition flex items-center gap-2 border border-amber-500/30">
+            <i class="fa-solid fa-qrcode"></i> Scanner Fidélité
+          </button>
+          <button onclick="switchAdminTab('users')" id="tabBtnUsers" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition flex items-center gap-2 border border-slate-700">
+            <i class="fa-solid fa-users"></i> Clients Inscrits
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 1: ORDERS MANAGEMENT -->
+      <div id="adminTabOrders" class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-list text-brand-400"></i> Suivi Global de Production
+          </h2>
+          <span id="adminOrdersTotal" class="text-xs bg-slate-800 border border-slate-700 px-3 py-1 rounded-full text-slate-300">0 commandes</span>
+        </div>
+
+        <div id="adminOrdersContainer" class="space-y-4">
+          <!-- Dynamically populated orders -->
+        </div>
+
+        <div id="emptyOrdersAdmin" class="hidden text-center py-12 bg-slate-900/50 border border-slate-800 rounded-2xl">
+          <i class="fa-solid fa-box-open text-4xl text-slate-600 mb-3"></i>
+          <p class="text-slate-300 font-medium">Aucune commande enregistrée</p>
+          <p class="text-xs text-slate-500 mt-1">Utilisez l'onglet "Créer une commande" pour attribuer un avion à un client.</p>
+        </div>
+      </div>
+
+      <!-- TAB 2: NEW ORDER CREATION -->
+      <div id="adminTabNewOrder" class="hidden max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl">
+        <h2 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+          <i class="fa-solid fa-paper-plane text-brand-400"></i> Nouvelle Commande Client
+        </h2>
+        <p class="text-xs text-slate-400 mb-6">Attribuez une nouvelle fabrication d'avion à un compte client existant ou en entrant son e-mail.</p>
+
+        <form onsubmit="handleCreateOrder(event)" class="space-y-5">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">E-mail du Client</label>
+            <div class="relative">
+              <input type="email" id="orderClientEmail" required list="usersEmailList" placeholder="client@exemple.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-sm text-white focus:outline-none focus:border-brand-500 transition">
+              <datalist id="usersEmailList">
+                <!-- Filled with registered emails -->
+              </datalist>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Vous pouvez sélectionner parmi les clients déjà inscrits.</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Type d'Avion</label>
+              <select id="orderPlaneType" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-sm text-white focus:outline-none focus:border-brand-500 transition">
+                <option value="Papier">Avion en Papier (Origami Haute Précision)</option>
+                <option value="Moteur">Avion à Moteur (Thermique / Électrique)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Nom du Modèle</label>
+              <input type="text" id="orderModelName" required placeholder="Ex: Super Concorde X, Stealth Dart v2..." class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-sm text-white focus:outline-none focus:border-brand-500 transition">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Statut Initial</label>
+            <select id="orderInitialStatus" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-sm text-white focus:outline-none focus:border-brand-500 transition">
+              <option value="En préparation">1. En préparation</option>
+              <option value="En assemblage">2. En assemblage</option>
+              <option value="Terminé">3. Terminé</option>
+            </select>
+          </div>
+
+          <button type="submit" class="w-full py-3 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-semibold rounded-xl shadow-lg transition">
+            <i class="fa-solid fa-plus mr-2"></i> Ajouter la commande
+          </button>
+        </form>
+      </div>
+
+      <!-- TAB 3: QR CODE SCANNER -->
+      <div id="adminTabScanner" class="hidden max-w-xl mx-auto space-y-6">
+        <div class="bg-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-xl">
+          <div class="text-center mb-6">
+            <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-2xl mx-auto flex items-center justify-center text-xl mb-3">
+              <i class="fa-solid fa-qrcode"></i>
+            </div>
+            <h2 class="text-xl font-bold text-white">Scanner de Carte Fidélité Client</h2>
+            <p class="text-xs text-slate-400 mt-1">Scannez le QR Code du client pour lui ajouter automatiquement <strong class="text-amber-400">+2 points de fidélité</strong>.</p>
+          </div>
+
+          <!-- Live Camera QR Scanner -->
+          <div class="space-y-4">
+            <div id="qrScannerWrapper" class="relative overflow-hidden rounded-xl border border-slate-700 bg-slate-950 min-h-[220px] flex flex-col items-center justify-center">
+              <div id="reader" class="w-full"></div>
+              <p id="scannerNotice" class="text-xs text-slate-500 p-4 text-center">Cliquez ci-dessous pour démarrer la caméra de votre téléphone/PC.</p>
+            </div>
+
+            <div class="flex gap-2">
+              <button onclick="startCameraScanner()" id="startCamBtn" class="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition">
+                <i class="fa-solid fa-camera mr-1.5"></i> Démarrer Caméra
+              </button>
+              <button onclick="stopCameraScanner()" id="stopCamBtn" class="hidden flex-1 py-2.5 bg-slate-800 text-slate-300 hover:bg-slate-700 font-semibold rounded-xl text-xs transition">
+                Arrêter
+              </button>
+            </div>
+          </div>
+
+          <!-- Manual / Simulated Scan Option -->
+          <div class="mt-8 pt-6 border-t border-slate-800">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+              <span>Simulation / Saisie Manuelle du QR Code</span>
+              <span class="text-[10px] text-slate-500 font-normal">Alternative</span>
+            </h3>
+
+            <div class="space-y-3">
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Sélectionner un Client :</label>
+                <select id="simulatedClientSelect" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white focus:outline-none focus:border-amber-500">
+                  <!-- Filled via JS -->
+                </select>
+              </div>
+
+              <button onclick="creditSelectedClient()" class="w-full py-2.5 bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-amber-400 font-semibold rounded-xl text-xs border border-amber-500/20 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-plus-circle"></i> Créditer +2 Points Manuellement
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: USERS LIST -->
+      <div id="adminTabUsers" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-users text-brand-400"></i> Clients & Comptes Enregistrés
+        </h2>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-400 bg-slate-950/50">
+                <th class="py-3 px-4 font-semibold">Identifiant Client</th>
+                <th class="py-3 px-4 font-semibold">Adresse E-mail</th>
+                <th class="py-3 px-4 font-semibold">Solde Points</th>
+                <th class="py-3 px-4 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsersTable" class="divide-y divide-slate-800/60 text-sm">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Modal for Password Reset -->
+  <div id="resetPasswordModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+      <button onclick="closeResetModal()" class="absolute top-4 right-4 text-slate-500 hover:text-white">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="text-center">
+        <div class="w-12 h-12 rounded-full bg-brand-500/10 text-brand-400 flex items-center justify-center mx-auto mb-2 text-xl">
+          <i class="fa-solid fa-key"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">Réinitialisation du mot de passe</h3>
+        <p class="text-xs text-slate-400 mt-1">Entrez votre adresse e-mail pour recevoir un lien de réinitialisation sécurisé (Simulation).</p>
+      </div>
+
+      <form onsubmit="handlePasswordReset(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Votre E-mail</label>
+          <input type="email" id="resetEmail" required placeholder="nom@exemple.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-sm text-white focus:outline-none focus:border-brand-500">
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl text-sm transition">
+          Envoyer le lien de réinitialisation
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-slate-950 border-t border-slate-900 py-6 text-center text-xs text-slate-600">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p>&copy; 2026 My Tpi. Atelier d'Avions en Papier & Moteur.</p>
+      <div class="flex space-x-4">
+        <span class="hover:text-slate-400 cursor-pointer">Support Admin: tpi.avion@gmail.com</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application JS Code -->
+  <script>
+    // --- APP CONSTANTS & STATE ---
+    const ADMIN_EMAIL = "tpi.avion@gmail.com";
+
+    // Initial Seed Data if LocalStorage is Empty
+    const INITIAL_USERS = [
+      { id: "usr_1", email: "tpi.avion@gmail.com", password: "admin", points: 0 },
+      { id: "usr_2", email: "client.demo@gmail.com", password: "123", points: 4 },
+      { id: "usr_3", email: "sophie.vol@outlook.fr", password: "123", points: 10 }
+    ];
+
+    const INITIAL_ORDERS = [
+      {
+        id: "ord_101",
+        clientEmail: "client.demo@gmail.com",
+        type: "Moteur",
+        model: "Biplan Spitfire Mk.IV (Électrique)",
+        status: "En assemblage",
+        date: "2026-03-28"
+      },
+      {
+        id: "ord_102",
+        clientEmail: "client.demo@gmail.com",
+        type: "Papier",
+        model: "Origami Concorde Supersonique 300g",
+        status: "En préparation",
+        date: "2026-03-30"
+      },
+      {
+        id: "ord_103",
+        clientEmail: "sophie.vol@outlook.fr",
+        type: "Moteur",
+        model: "Jet V-22 Osprey Mini",
+        status: "Terminé",
+        date: "2026-03-25"
+      }
+    ];
+
+    let users = JSON.parse(localStorage.getItem('mytpi_users')) || INITIAL_USERS;
+    let orders = JSON.parse(localStorage.getItem('mytpi_orders')) || INITIAL_ORDERS;
+    let currentUser = JSON.parse(localStorage.getItem('mytpi_current_user')) || null;
+
+    let authIsSignup = false;
+    let html5QrcodeScanner = null;
+
+    // --- INITIALIZATION ON LOAD ---
+    window.onload = function() {
+      // Realtime email detection for Admin alert in form
+      const emailInput = document.getElementById('authEmail');
+      const passGroup = document.getElementById('passwordGroup');
+      const passInput = document.getElementById('authPassword');
+      
+      if (emailInput) {
+        emailInput.addEventListener('input', (e) => {
+          const notice = document.getElementById('adminBadgeNotice');
+          const isEmailAdmin = e.target.value.trim().toLowerCase() === ADMIN_EMAIL;
+          if (isEmailAdmin) {
+            notice.classList.remove('hidden');
+            passInput.removeAttribute('required');
+          } else {
+            notice.classList.add('hidden');
+            if (!authIsSignup) passInput.setAttribute('required', 'true');
+          }
+        });
+      }
+
+      saveData();
+      renderApp();
+    };
+
+    function saveData() {
+      localStorage.setItem('mytpi_users', JSON.stringify(users));
+      localStorage.setItem('mytpi_orders', JSON.stringify(orders));
+      if (currentUser) {
+        localStorage.setItem('mytpi_current_user', JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem('mytpi_current_user');
+      }
+    }
+
+    // --- RENDER ROUTER & VIEWS ---
+    function renderApp() {
+      const authView = document.getElementById('authView');
+      const clientDashboard = document.getElementById('clientDashboard');
+      const adminDashboard = document.getElementById('adminDashboard');
+      const userNav = document.getElementById('userNav');
+
+      if (!currentUser) {
+        // Not logged in
+        authView.classList.remove('hidden');
+        clientDashboard.classList.add('hidden');
+        adminDashboard.classList.add('hidden');
+        userNav.classList.add('hidden');
+      } else {
+        authView.classList.add('hidden');
+        userNav.classList.remove('hidden');
+        document.getElementById('navUserEmail').innerText = currentUser.email;
+
+        if (currentUser.email.toLowerCase() === ADMIN_EMAIL) {
+          // ADMIN VIEW
+          document.getElementById('navUserRole').innerText = "Administrateur";
+          document.getElementById('navUserRole').className = "inline-block text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30";
+          adminDashboard.classList.remove('hidden');
+          clientDashboard.classList.add('hidden');
+          renderAdminDashboard();
+        } else {
+          // CLIENT VIEW
+          document.getElementById('navUserRole').innerText = "Client Privilège";
+          document.getElementById('navUserRole').className = "inline-block text-xs px-2 py-0.5 rounded-full bg-slate-800 text-brand-400 font-medium border border-slate-700";
+          clientDashboard.classList.remove('hidden');
+          adminDashboard.classList.add('hidden');
+          renderClientDashboard();
+        }
+      }
+    }
+
+    // --- AUTHENTICATION LOGIC ---
+    function togglePasswordVisibility(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+      } else {
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+      }
+    }
+
+    function toggleAuthMode() {
+      authIsSignup = !authIsSignup;
+      const title = document.getElementById('authTitle');
+      const subtitle = document.getElementById('authSubtitle');
+      const btn = document.getElementById('authSubmitBtn');
+      const toggleText = document.getElementById('authToggleText');
+      const toggleBtn = document.getElementById('authToggleBtn');
+      const forgotRow = document.getElementById('authActionsRow');
+      const passInput = document.getElementById('authPassword');
+
+      if (authIsSignup) {
+        title.innerText = "Créer un compte Client";
+        subtitle.innerText = "Rejoignez AéroCraft pour enregistrer et suivre vos commandes";
+        btn.innerText = "S'inscrire";
+        toggleText.innerText = "Déjà un compte ?";
+        toggleBtn.innerText = "Se connecter";
+        forgotRow.classList.add('hidden');
+        passInput.setAttribute('required', 'true');
+      } else {
+        title.innerText = "Connexion à votre espace";
+        subtitle.innerText = "Accédez au suivi de vos avions & votre carte de fidélité";
+        btn.innerText = "Se Connecter";
+        toggleText.innerText = "Pas encore de compte ?";
+        toggleBtn.innerText = "Créer un compte";
+        forgotRow.classList.remove('hidden');
+      }
+    }
+
+    function handleAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('authEmail').value.trim().toLowerCase();
+      const password = document.getElementById('authPassword').value;
+
+      if (!email) {
+        showToast("Veuillez saisir votre adresse e-mail", "error");
+        return;
+      }
+
+      // Special handling for ADMIN email: bypass password requirement
+      if (email === ADMIN_EMAIL) {
+        let adminUser = users.find(u => u.email === ADMIN_EMAIL);
+        if (!adminUser) {
+          adminUser = { id: "usr_admin", email: ADMIN_EMAIL, password: "", points: 0 };
+          users.push(adminUser);
+        }
+        currentUser = adminUser;
+        saveData();
+        showToast("Connexion Administrateur autorisée sans mot de passe", "success");
+        renderApp();
+        return;
+      }
+
+      if (authIsSignup) {
+        if (!password) {
+          showToast("Veuillez saisir un mot de passe pour la création du compte", "error");
+          return;
+        }
+        // Handle Signup
+        const existing = users.find(u => u.email === email);
+        if (existing) {
+          showToast("Un compte existe déjà avec cette adresse e-mail.", "error");
+          return;
+        }
+
+        const newUser = {
+          id: "usr_" + Date.now(),
+          email: email,
+          password: password,
+          points: 0
+        };
+        users.push(newUser);
+        currentUser = newUser;
+        saveData();
+        showToast("Compte créé avec succès ! Bienvenue à bord.", "success");
+        renderApp();
+      } else {
+        // Handle Login for regular clients
+        if (!password) {
+          showToast("Veuillez saisir votre mot de passe", "error");
+          return;
+        }
+        const user = users.find(u => u.email === email && u.password === password);
+        if (user) {
+          currentUser = user;
+          saveData();
+          showToast("Connexion réussie", "success");
+          renderApp();
+        } else {
+          showToast("Adresse e-mail ou mot de passe incorrect.", "error");
+        }
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      saveData();
+      showToast("Vous vous êtes déconnecté.", "info");
+      renderApp();
+    }
+
+    function toggleForgotPassword() {
+      document.getElementById('resetPasswordModal').classList.remove('hidden');
+    }
+
+    function closeResetModal() {
+      document.getElementById('resetPasswordModal').classList.add('hidden');
+    }
+
+    function handlePasswordReset(e) {
+      e.preventDefault();
+      const email = document.getElementById('resetEmail').value.trim();
+      showToast(`Instructions de réinitialisation envoyées à ${email}`, "success");
+      closeResetModal();
+    }
+
+
+    // --- CLIENT DASHBOARD LOGIC ---
+    function renderClientDashboard() {
+      // Update User Points from state
+      const freshUserData = users.find(u => u.id === currentUser.id) || currentUser;
+      document.getElementById('clientPoints').innerText = freshUserData.points || 0;
+      document.getElementById('clientCardId').innerText = freshUserData.id;
+
+      // Generate QR Code with user payload
+      const qrCanvas = document.getElementById('qrcodeCanvas');
+      qrCanvas.innerHTML = ''; // clear
+      
+      const payload = JSON.stringify({
+        userId: freshUserData.id,
+        email: freshUserData.email
+      });
+
+      new QRCode(qrCanvas, {
+        text: payload,
+        width: 88,
+        height: 88,
+        colorDark : "#0f172a",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+      });
+
+      // Filter & Render Orders for this client
+      const myOrders = orders.filter(o => o.clientEmail.toLowerCase() === freshUserData.email.toLowerCase());
+      const container = document.getElementById('clientOrdersList');
+      const emptyState = document.getElementById('emptyOrdersClient');
+      document.getElementById('orderCountBadge').innerText = `${myOrders.length} commande(s)`;
+
+      container.innerHTML = '';
+
+      if (myOrders.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        myOrders.forEach(order => {
+          container.appendChild(createOrderCardClient(order));
+        });
+      }
+    }
+
+    function createOrderCardClient(order) {
+      const card = document.createElement('div');
+      card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-lg hover:border-slate-700 transition";
+
+      // Status progress step numbers
+      const steps = ["En préparation", "En assemblage", "Terminé"];
+      const currentStepIdx = steps.indexOf(order.status);
+      const progressPct = ((currentStepIdx) / (steps.length - 1)) * 100;
+
+      const typeBadge = order.type === 'Moteur' 
+        ? `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"><i class="fa-solid fa-bolt mr-1"></i>Avion à Moteur</span>`
+        : `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20"><i class="fa-solid fa-paper-plane mr-1"></i>Avion Papier Origami</span>`;
+
+      card.innerHTML = `
+        <div class="flex justify-between items-start">
+          <div>
+            ${typeBadge}
+            <h3 class="text-lg font-bold text-white mt-2">${escapeHtml(order.model)}</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Commande #${order.id} • ${order.date}</p>
+          </div>
+          <span class="text-xs font-bold px-3 py-1 rounded-full ${getStatusBadgeClass(order.status)}">
+            ${order.status}
+          </span>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="space-y-2 pt-2">
+          <div class="flex justify-between text-xs font-medium text-slate-400">
+            <span>Progression de fabrication</span>
+            <span class="text-brand-400 font-bold">${Math.round(progressPct)}%</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
+            <div class="h-full bg-gradient-to-r from-brand-600 via-brand-500 to-amber-400 rounded-full transition-all duration-500" style="width: ${progressPct}%"></div>
+          </div>
+          <div class="grid grid-cols-3 text-[10px] sm:text-xs text-center font-medium pt-1">
+            <span class="${currentStepIdx >= 0 ? 'text-brand-400 font-bold' : 'text-slate-600'}">1. Préparation</span>
+            <span class="${currentStepIdx >= 1 ? 'text-brand-400 font-bold' : 'text-slate-600'}">2. Assemblage</span>
+            <span class="${currentStepIdx >= 2 ? 'text-emerald-400 font-bold' : 'text-slate-600'}">3. Terminé</span>
+          </div>
+        </div>
+      `;
+      return card;
+    }
+
+
+    // --- ADMIN DASHBOARD LOGIC ---
+    function renderAdminDashboard() {
+      renderAdminOrdersList();
+      populateDatalistUsers();
+      renderUsersTable();
+    }
+
+    function switchAdminTab(tabName) {
+      const tabs = ['orders', 'newOrder', 'scanner', 'users'];
+      tabs.forEach(t => {
+        const tabEl = document.getElementById('adminTab' + capitalize(t));
+        const btnEl = document.getElementById('tabBtn' + capitalize(t));
+        if (t === tabName) {
+          tabEl.classList.remove('hidden');
+          btnEl.className = "px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 text-white transition flex items-center gap-2";
+        } else {
+          tabEl.classList.add('hidden');
+          btnEl.className = "px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition flex items-center gap-2 border border-slate-700";
+        }
+      });
+
+      if (tabName !== 'scanner') {
+        stopCameraScanner();
+      }
+    }
+
+    function renderAdminOrdersList() {
+      const container = document.getElementById('adminOrdersContainer');
+      const emptyState = document.getElementById('emptyOrdersAdmin');
+      document.getElementById('adminOrdersTotal').innerText = `${orders.length} commande(s)`;
+
+      container.innerHTML = '';
+
+      if (orders.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        orders.forEach(order => {
+          container.appendChild(createOrderCardAdmin(order));
+        });
+      }
+    }
+
+    function createOrderCardAdmin(order) {
+      const card = document.createElement('div');
+      card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-md";
+
+      const typeBadge = order.type === 'Moteur' 
+        ? `<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Moteur</span>`
+        : `<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">Papier</span>`;
+
+      card.innerHTML = `
+        <div class="flex flex-wrap justify-between items-start gap-2">
+          <div>
+            <div class="flex items-center gap-2">
+              ${typeBadge}
+              <h3 class="text-base font-bold text-white">${escapeHtml(order.model)}</h3>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Client : <strong class="text-slate-200">${escapeHtml(order.clientEmail)}</strong></p>
+          </div>
+          
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-bold px-2.5 py-1 rounded-full ${getStatusBadgeClass(order.status)}">
+              ${order.status}
+            </span>
+            <button onclick="deleteOrder('${order.id}')" class="p-1.5 text-slate-500 hover:text-red-400 transition" title="Supprimer la commande">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Palier Radio Checkboxes for Admin Status Control -->
+        <div class="pt-2 border-t border-slate-800/80">
+          <label class="block text-[11px] uppercase tracking-wider font-bold text-slate-400 mb-2">Changer le Palier de Production :</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="updateOrderStatus('${order.id}', 'En préparation')" 
+                    class="py-2 px-2 text-xs font-semibold rounded-xl border transition flex items-center justify-center gap-1.5 ${order.status === 'En préparation' ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800'}">
+              <i class="fa-solid ${order.status === 'En préparation' ? 'fa-circle-check' : 'fa-circle-notch'} text-xs"></i>
+              1. En préparation
+            </button>
+
+            <button onclick="updateOrderStatus('${order.id}', 'En assemblage')" 
+                    class="py-2 px-2 text-xs font-semibold rounded-xl border transition flex items-center justify-center gap-1.5 ${order.status === 'En assemblage' ? 'bg-brand-500/20 border-brand-500 text-brand-300' : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800'}">
+              <i class="fa-solid ${order.status === 'En assemblage' ? 'fa-circle-check' : 'fa-circle-notch'} text-xs"></i>
+              2. En assemblage
+            </button>
+
+            <button onclick="updateOrderStatus('${order.id}', 'Terminé')" 
+                    class="py-2 px-2 text-xs font-semibold rounded-xl border transition flex items-center justify-center gap-1.5 ${order.status === 'Terminé' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800'}">
+              <i class="fa-solid ${order.status === 'Terminé' ? 'fa-circle-check' : 'fa-circle-notch'} text-xs"></i>
+              3. Terminé
+            </button>
+          </div>
+        </div>
+      `;
+
+      return card;
+    }
+
+    function updateOrderStatus(orderId, newStatus) {
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        order.status = newStatus;
+        saveData();
+        renderAdminOrdersList();
+        showToast(`Commande mise à jour : "${newStatus}"`, "success");
+      }
+    }
+
+    function deleteOrder(orderId) {
+      orders = orders.filter(o => o.id !== orderId);
+      saveData();
+      renderAdminOrdersList();
+      showToast("Commande supprimée", "info");
+    }
+
+    function handleCreateOrder(e) {
+      e.preventDefault();
+      const email = document.getElementById('orderClientEmail').value.trim().toLowerCase();
+      const type = document.getElementById('orderPlaneType').value;
+      const model = document.getElementById('orderModelName').value.trim();
+      const initialStatus = document.getElementById('orderInitialStatus').value;
+
+      if (!email || !model) {
+        showToast("Veuillez saisir un e-mail et un modèle d'avion", "error");
+        return;
+      }
+
+      const newOrder = {
+        id: "ord_" + Math.floor(1000 + Math.random() * 9000),
+        clientEmail: email,
+        type: type,
+        model: model,
+        status: initialStatus,
+        date: new Date().toISOString().split('T')[0]
+      };
+
+      orders.unshift(newOrder);
+      saveData();
+      showToast(`Commande créée pour ${email} !`, "success");
+
+      // Reset Form & switch tab
+      document.getElementById('orderModelName').value = '';
+      switchAdminTab('orders');
+    }
+
+    function populateDatalistUsers() {
+      const datalist = document.getElementById('usersEmailList');
+      const selectSimulated = document.getElementById('simulatedClientSelect');
+      
+      datalist.innerHTML = '';
+      selectSimulated.innerHTML = '<option value="">-- Choisir un Client à créditer --</option>';
+
+      users.filter(u => u.email !== ADMIN_EMAIL).forEach(u => {
+        // Option datalist
+        const opt = document.createElement('option');
+        opt.value = u.email;
+        datalist.appendChild(opt);
+
+        // Option select scanner simulation
+        const selectOpt = document.createElement('option');
+        selectOpt.value = u.id;
+        selectOpt.innerText = `${u.email} (${u.points} pts)`;
+        selectSimulated.appendChild(selectOpt);
+      });
+    }
+
+    function renderUsersTable() {
+      const tbody = document.getElementById('adminUsersTable');
+      tbody.innerHTML = '';
+
+      users.forEach(user => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-950/40 transition";
+        const isAdmin = user.email.toLowerCase() === ADMIN_EMAIL;
+
+        tr.innerHTML = `
+          <td class="py-3 px-4 text-xs font-mono text-slate-400">${user.id}</td>
+          <td class="py-3 px-4 font-medium text-white flex items-center gap-2">
+            ${user.email}
+            ${isAdmin ? '<span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">ADMIN</span>' : ''}
+          </td>
+          <td class="py-3 px-4 font-bold text-amber-400">${user.points || 0} pts</td>
+          <td class="py-3 px-4 text-right">
+            ${!isAdmin ? `
+              <button onclick="creditUserPoints('${user.id}', 2)" class="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 rounded-lg text-xs font-semibold border border-amber-500/20 transition">
+                +2 Points
+              </button>
+            ` : '-'}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- FIDELITY SCANNER LOGIC ---
+    function startCameraScanner() {
+      document.getElementById('startCamBtn').classList.add('hidden');
+      document.getElementById('stopCamBtn').classList.remove('hidden');
+      document.getElementById('scannerNotice').innerText = "Veuillez cadrer le QR code de la carte client.";
+
+      if (!html5QrcodeScanner) {
+        html5QrcodeScanner = new Html5Qrcode("reader");
+      }
+
+      const config = { fps: 10, qrbox: { width: 200, height: 200 } };
+
+      html5QrcodeScanner.start(
+        { facingMode: "environment" },
+        config,
+        onQrCodeSuccess,
+        onQrCodeError
+      ).catch(err => {
+        console.warn("Camera start failed, fallback to simulation mode", err);
+        showToast("Impossible d'accéder à la caméra. Utilisez la simulation manuelle ci-dessous.", "info");
+        stopCameraScanner();
+      });
+    }
+
+    function stopCameraScanner() {
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => {
+          document.getElementById('startCamBtn').classList.remove('hidden');
+          document.getElementById('stopCamBtn').classList.add('hidden');
+          document.getElementById('scannerNotice').innerText = "Cliquez ci-dessous pour démarrer la caméra de votre téléphone/PC.";
+        }).catch(err => console.log(err));
+      }
+    }
+
+    function onQrCodeSuccess(decodedText) {
+      try {
+        const data = JSON.parse(decodedText);
+        if (data && (data.userId || data.email)) {
+          const user = users.find(u => u.id === data.userId || u.email.toLowerCase() === data.email.toLowerCase());
+          if (user) {
+            creditUserPoints(user.id, 2);
+            stopCameraScanner();
+          } else {
+            showToast("QR Code valide mais client non trouvé.", "error");
+          }
+        } else {
+          showToast("Format QR Code non reconnu.", "error");
+        }
+      } catch (e) {
+        // If plain email string in QR code
+        const user = users.find(u => u.email.toLowerCase() === decodedText.trim().toLowerCase());
+        if (user) {
+          creditUserPoints(user.id, 2);
+          stopCameraScanner();
+        } else {
+          showToast("Code scanné invalide.", "error");
+        }
+      }
+    }
+
+    function onQrCodeError(error) {
+      // Quiet fail during scanning frame checks
+    }
+
+    function creditSelectedClient() {
+      const select = document.getElementById('simulatedClientSelect');
+      const userId = select.value;
+      if (!userId) {
+        showToast("Veuillez choisir un client dans la liste.", "error");
+        return;
+      }
+      creditUserPoints(userId, 2);
+    }
+
+    function creditUserPoints(userId, amount) {
+      const user = users.find(u => u.id === userId);
+      if (user) {
+        user.points = (user.points || 0) + amount;
+        saveData();
+        renderAdminDashboard();
+        showToast(`+${amount} Points de fidélité ajoutés à ${user.email} ! (Total: ${user.points} pts)`, "success");
+      }
+    }
+
+
+    // --- HELPERS & UTILS ---
+    function getStatusBadgeClass(status) {
+      switch (status) {
+        case 'En préparation':
+          return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+        case 'En assemblage':
+          return 'bg-brand-500/10 text-brand-400 border border-brand-500/20';
+        case 'Terminé':
+          return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+        default:
+          return 'bg-slate-800 text-slate-300';
+      }
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      
+      let bgClass = "bg-slate-800 border-slate-700 text-white";
+      let icon = '<i class="fa-solid fa-circle-info text-brand-400"></i>';
+
+      if (type === 'success') {
+        bgClass = "bg-emerald-950 border-emerald-700/50 text-emerald-100";
+        icon = '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
+      } else if (type === 'error') {
+        bgClass = "bg-rose-950 border-rose-700/50 text-rose-100";
+        icon = '<i class="fa-solid fa-circle-xmark text-rose-400"></i>';
+      }
+
+      toast.className = `pointer-events-auto flex items-center space-x-3 px-4 py-3 rounded-xl border shadow-xl text-xs font-medium transform transition-all duration-300 translate-y-2 opacity-0 ${bgClass}`;
+      toast.innerHTML = `${icon} <span>${escapeHtml(message)}</span>`;
+
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function escapeHtml(str) {
+      return str ? String(str).replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+      }) : '';
+    }
+  </script>
+</body>
+</html>
